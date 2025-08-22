@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -12,16 +11,16 @@ type FormatterParams struct {
 	File string `json:"file" jsonschema:"the absolute path to the protobuf file"`
 }
 
-func formatFile(ctx context.Context, req *mcp.CallToolRequest, args FormatterParams) (*mcp.CallToolResult, any, error) {
-	err := readFormatWrite(args.File)
+func formatFile(ctx context.Context, ss *mcp.ServerSession, params *mcp.CallToolParamsFor[FormatterParams]) (*mcp.CallToolResultFor[any], error) {
+	err := readFormatWrite(params.Arguments.File)
 	if err != nil {
-		return &mcp.CallToolResult{
+		return &mcp.CallToolResultFor[any]{
 			Content: []mcp.Content{&mcp.TextContent{Text: "error: " + err.Error()}},
-		}, nil, nil
+		}, nil
 	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: "formatted " + args.File}},
-	}, nil, nil
+	return &mcp.CallToolResultFor[any]{
+		Content: []mcp.Content{&mcp.TextContent{Text: "formatted " + params.Arguments.File}},
+	}, nil
 }
 
 func main() {
@@ -33,7 +32,7 @@ func main() {
 		Description: "Formats a protobuf (.proto) file",
 	}, formatFile)
 	// Run the server over stdin/stdout, until the client disconnects
-	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+	if err := server.Run(context.Background(), mcp.NewStdioTransport()); err != nil {
 		log.Fatal(err)
 	}
 }

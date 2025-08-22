@@ -1,9 +1,9 @@
 module github.com/emicklei/protofmt-mcp
 
-go 1.24.0
+go 1.25
 
 require (
-	github.com/emicklei/proto v1.14.1
+	github.com/emicklei/proto v1.14.2
 	github.com/emicklei/proto-contrib v0.18.2
 	github.com/modelcontextprotocol/go-sdk v0.2.0
 )

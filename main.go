@@ -3,39 +3,37 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type FormatterParams struct {
+	File string `json:"file" jsonschema:"the absolute path to the protobuf file"`
+}
+
+func formatFile(ctx context.Context, req *mcp.CallToolRequest, args FormatterParams) (*mcp.CallToolResult, any, error) {
+	err := readFormatWrite(args.File)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: "error: " + err.Error()}},
+		}, nil, nil
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: "formatted " + args.File}},
+	}, nil, nil
+}
+
 func main() {
-	// Create a new MCP server
-	s := server.NewMCPServer(
-		"Protobuf Formatter",
-		"0.1.0",
-		server.WithToolCapabilities(false),
-		server.WithRecovery(),
-	)
-	formatterTool := mcp.NewTool("protobuf_format",
-		mcp.WithDescription("Formats a protobuf (.proto) file"),
-		mcp.WithString("file",
-			mcp.Required(),
-			mcp.Description("The absolute path to the protobuf file"),
-		),
-	)
-	s.AddTool(formatterTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// Using helper functions for type-safe argument access
-		fileName, err := request.RequireString("file")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		err = readFormatWrite(fileName)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		return mcp.NewToolResultText("formatted " + fileName), nil
-	})
-	if err := server.ServeStdio(s); err != nil {
-		fmt.Printf("Server error: %v\n", err)
+	// Create a server with a single tool.
+	server := mcp.NewServer(&mcp.Implementation{Name: "Protobuf Formatter", Version: "0.1.0"}, nil)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "protobuf_format",
+		Description: "Formats a protobuf (.proto) file",
+	}, formatFile)
+	// Run the server over stdin/stdout, until the client disconnects
+	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+		log.Fatal(err)
 	}
 }
